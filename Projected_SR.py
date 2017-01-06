@@ -21,24 +21,6 @@ import math
 '''
 Import the data
 '''
-# Import all open WO data
-# Criteria for WebI Report:
-# Req Type = "PM; SR"
-# WO Status = "Assigned; Open"
-# Crews = "All"
-# !!! This is no longer used because I was thinking I would subtract any 
-# SR that were already entered and due in the next two weeks. That was when 
-# this report was based on the due date of SR not on the issue date. I changed
-# my approach and am now estimating how many SR will be ISSUED in the next 
-# two weeks, not how many will be due. I did that because we change the 
-# priorities of WO's and this seemed like a better true estimate. Plus there
-# were problems I was running in to if we already exceeded the previous number
-# of WO's due in the week, then we got a negative estimate for how many WO's
-# would be due in the week...which was clearly wrong.
-kpi_excel = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_Open_and_' \
-          'Closed_WO_-_DGH_Master.xlsx'
-kpi_df = pd.read_excel(kpi_excel)
-
 # Location of file with previous SR data
 # This data can have any length of date range and should include all WO's
 # This range of data usually mirrors the time period for which it is seeking
