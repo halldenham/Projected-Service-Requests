@@ -18,8 +18,6 @@ from datetime import datetime, timedelta, date
 import datetime as dt
 import math
 
-
-
 '''
 Import the data
 '''
@@ -28,29 +26,39 @@ Import the data
 # Req Type = "PM; SR"
 # WO Status = "Assigned; Open"
 # Crews = "All"
-KPIdata = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_Open_and_' \
+# !!! This is no longer used because I was thinking I would subtract any 
+# SR that were already entered and due in the next two weeks. That was when 
+# this report was based on the due date of SR not on the issue date. I changed
+# my approach and am now estimating how many SR will be ISSUED in the next 
+# two weeks, not how many will be due. I did that because we change the 
+# priorities of WO's and this seemed like a better true estimate. Plus there
+# were problems I was running in to if we already exceeded the previous number
+# of WO's due in the week, then we got a negative estimate for how many WO's
+# would be due in the week...which was clearly wrong.
+kpi_excel = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_Open_and_' \
           'Closed_WO_-_DGH_Master.xlsx'
-KPI_df = pd.read_excel(KPIdata)
+kpi_df = pd.read_excel(kpi_excel)
 
 # Location of file with previous SR data
 # This data can have any length of date range and should include all WO's
 # This range of data usually mirrors the time period for which it is seeking
 # to predict: i.e. if the next two weeks are Dec 1-14, 2016, then the data
-# should cover Dec 1-14, 2015 and potentially some buffer on either side
-SRdata = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_SR_Project' \
+# should cover Dec 1-14, 2015 and potentially some buffer on either side.
+# This is the raw data used to predict future SR.
+sr_excel = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_SR_Project' \
          'ed_-_DGH_Master.xlsx'
 
 # Create dataframe from previous SR data
-SR_df = pd.read_excel(SRdata)
+sr_df = pd.read_excel(sr_excel)
 
 # Location of file with data of what buildings belong to what zones
 # Note that first column should be "Bldg/ Land Entity" which is the building 
 # number and second column should be "Zone" 
-BuildingData = r'C:\Users\dh1023.AD\Desktop\Python\FMS61100_-_Active_Build' \
+bldg_excel = r'C:\Users\dh1023.AD\Desktop\Python\FMS61100_-_Active_Build' \
                'ing_or_Land_Entity_Listing.xlsx'
 
 # Create dataframe from building data
-Bldg_df = pd.read_excel(BuildingData)
+bldg_df = pd.read_excel(bldg_excel)
 
 
 
@@ -60,16 +68,15 @@ Bldg_df = pd.read_excel(BuildingData)
 Merge/Join the Zone and Building Information to SR data
 '''
 # change the name of the bldg number to make merge/join easier
-Bldg_df.columns = ['WO Building', 'Zone']
+bldg_df.columns = ['WO Building', 'Zone']
 
 # make sure the building numbers are numbers, not text from WebI
-SR_df['WO Building'] = pd.to_numeric(SR_df['WO Building'], errors='coerce')
-Bldg_df['WO Building'] = pd.to_numeric(Bldg_df['WO Building'], errors='coerce')
+sr_df['WO Building'] = pd.to_numeric(sr_df['WO Building'], errors='coerce')
+bldg_df['WO Building'] = pd.to_numeric(bldg_df['WO Building'], errors='coerce')
 
 # Merge/join data from Buldings so that the work orders have the correct 
-# current zone/ops assigned to them
-SR_df = SR_df.merge(Bldg_df, on='WO Building', how='left')
-
+# current zone/ops associated with them
+sr_df = sr_df.merge(bldg_df, on='WO Building', how='left')
 
 
 
@@ -79,47 +86,45 @@ SR_df = SR_df.merge(Bldg_df, on='WO Building', how='left')
 Find the average per week of work orders and use as our projection
 '''
 # how many weeks worth of data do we have?
-weeksOfData = (SR_df['Enter Date'].max() - SR_df['Enter Date'].min()).days/7
+weeks_of_data = (sr_df['Enter Date'].max() - sr_df['Enter Date'].min()).days/7
 
-# how many WO's were entered by priority and craft over the given period?
-# what is the sum of esimated hours of the given period?
-# use ".size()" instead of .count() because size counts null values
-# our historical average becomes our projected work
-
-previousWO = SR_df.groupby(['WO Crew','Zone','Craft_v','WO Priority']).agg({
+# How many WO's were entered by priority, craft, & zone over the given period?
+# Use ".size()" instead of .count() because size counts null values.
+# Note: our historical average becomes our projected work.
+previous_wo = sr_df.groupby(['WO Crew','Zone','Craft_v','WO Priority']).agg({
                             'WO Num': np.size, 'Est Hrs WO Calculated_v': 
                                 np.sum})
 
 # rename WO Num column to "WOcount" since it no longer is individual WO's
 # but a summation of WO's
-previousWO = previousWO.rename(columns = {'WO Num':'WOcount'})
+previous_wo = previous_wo.rename(columns = {'WO Num':'WOcount'})
 
 # what does that average out to be per week?
-avgWOperWeek = previousWO / weeksOfData
+avg_wo_per_wk = previous_wo / weeks_of_data
 
 # reset index to actually create a dataframe
-avgWOperWeek = avgWOperWeek.reset_index()
+avg_wo_per_wk = avg_wo_per_wk.reset_index()
 
 # calculate avg hrs per WO by adding column that way you don't have to perform
 # that calculation over and over again when you write the data
-avgWOperWeek['HrsPerWO'] = avgWOperWeek['Est Hrs WO Calculated_v'] / \
-                           avgWOperWeek['WOcount']
+avg_wo_per_wk['HrsPerWO'] = avg_wo_per_wk['Est Hrs WO Calculated_v'] / \
+                           avg_wo_per_wk['WOcount']
 
 # drop 'Est Hrs WO Calculated_v' now that we're done with it
-del avgWOperWeek['Est Hrs WO Calculated_v']
+del avg_wo_per_wk['Est Hrs WO Calculated_v']
 
-# round count of WO's up to nearest whole number using "ceil"
-avgWOperWeek['WOcount'] = avgWOperWeek['WOcount'].apply(math.ceil)
+# round the count of WO's up to nearest whole number using "ceil"
+avg_wo_per_wk['WOcount'] = avg_wo_per_wk['WOcount'].apply(math.ceil)
                                                       
-# add column for days to add to enter date by creating a table for priority 
-# day time deltas for reference
-WOPDaysRaw = [(1, timedelta(4)), (2, timedelta(8)), (3, timedelta(14)), 
+# create a table of time deltas for the Priority Days.
+wo_pri_days_raw = [(1, timedelta(4)), (2, timedelta(8)), (3, timedelta(14)), 
               (4, timedelta(30))]
-WOPDays = pd.DataFrame(data = WOPDaysRaw, columns=['WO Priority', 
+wo_pri_days = pd.DataFrame(data = wo_pri_days_raw, columns=['WO Priority', 
                                                    'PriorityDays'])
-# add WOPDays timedelta data to end of avgWOperWeek data
-# if WO priority = number then column timedelta equals said thing
-avgWOperWeek = avgWOperWeek.merge(WOPDays, on='WO Priority', how='left')
+
+# add wo_pri_days timedelta data to end of avg_wo_per_wk data.
+# If WO priority = priority number then column timedelta equals said thing
+avg_wo_per_wk = avg_wo_per_wk.merge(wo_pri_days, on='WO Priority', how='left')
 
 
 
@@ -127,16 +132,16 @@ avgWOperWeek = avgWOperWeek.merge(WOPDays, on='WO Priority', how='left')
 Create a dataframe for individual projected work orders
 '''
 # create the dataframe to write data to
-x_WOnum = []
-x_EnterDate = []
-x_DueDate = []
-x_Crew = []
-x_Craft = []
-x_Priority = []
+x_wo_num = []
+x_enter_date = []
+x_due_date = []
+x_crew = []
+x_craft = []
+x_priority = []
 
-x_dataSet = list(zip(x_WOnum,x_EnterDate,x_DueDate,x_Crew,x_Craft,
-                     x_Priority))
-x_df = pd.DataFrame(data = x_dataSet, columns=['WO Num', 'Enter Date', 
+x_data_set = list(zip(x_wo_num,x_enter_date,x_due_date,x_crew,x_craft,
+                     x_priority))
+x_df = pd.DataFrame(data = x_data_set, columns=['WO Num', 'Enter Date', 
                                                'Due Date', 'Crew', 'Craft_v', 
                                                'WO Priority'])
 
@@ -144,12 +149,13 @@ x_df = pd.DataFrame(data = x_dataSet, columns=['WO Num', 'Enter Date',
 
 '''
 Create loop to write data
-This loop goes through the avgWOperWeek data and for each row creates an
-individual "dummy" or projected WO and creates a data from so that there is
+This loop goes through the avg_wo_per_wk data and for each row creates an
+individual "dummy" or projected WO and creates data from that so there is
 and dataframe of individual projected WO's as if they've already been created.
 '''
 # begin building data for projected WO's
 today = pd.to_datetime('today')
+# project two weeks worth of data from todays date
 Week1 = today + timedelta(7)
 Week2 = today + timedelta(14)
 
@@ -158,16 +164,16 @@ FirstMonday = (Week1 - timedelta(days=Week1.weekday()))
 SecondMonday = (Week2 - timedelta(days=Week2.weekday()))
 
 i = 0 # row of data we're pulling
-while i < len(avgWOperWeek):
+while i < len(avg_wo_per_wk):
     
     # select start and due dates
-    Crew = avgWOperWeek.ix[i,'WO Crew']
-    WO_Zone = avgWOperWeek.ix[i,'Zone']
-    Craft_v = avgWOperWeek.ix[i,'Craft_v']
-    WO_Priority = avgWOperWeek.ix[i,'WO Priority']
-    WO_Count = avgWOperWeek.ix[i,'WOcount']
-    HrsPerWO = avgWOperWeek.ix[i,'HrsPerWO']
-    PriorityDays = avgWOperWeek.ix[i,'PriorityDays']
+    Crew = avg_wo_per_wk.ix[i,'WO Crew']
+    WO_Zone = avg_wo_per_wk.ix[i,'Zone']
+    Craft_v = avg_wo_per_wk.ix[i,'Craft_v']
+    WO_Priority = avg_wo_per_wk.ix[i,'WO Priority']
+    WO_Count = avg_wo_per_wk.ix[i,'WOcount']
+    HrsPerWO = avg_wo_per_wk.ix[i,'HrsPerWO']
+    PriorityDays = avg_wo_per_wk.ix[i,'PriorityDays']
     WO_Num = 'Projected'    
 
     ii = 0 # iterate through number of estimated WO's
