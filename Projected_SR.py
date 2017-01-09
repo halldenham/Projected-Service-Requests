@@ -108,25 +108,19 @@ wo_pri_days = pd.DataFrame(data = wo_pri_days_raw, columns=['WO Priority',
 # If WO priority = priority number then column timedelta equals said thing
 avg_wo_per_wk = avg_wo_per_wk.merge(wo_pri_days, on='WO Priority', how='left')
 
+# !!!!!!!!!!! need to update the WO crew here to eliminate "Zone x" and change
+# to be "Ops x"
+#if avg_wo_per_wk['WO Crew'] == 'Zone wildcard character':
+#   avg_wo_per_wk['updated_crew'] = "Ops " + avg_wo_per_wk['Zone']
+
 
 
 '''
 Create a dataframe for individual projected work orders
 '''
-# create the dataframe to write data to
-x_wo_num = []
-x_enter_date = []
-x_due_date = []
-x_crew = []
-x_craft = []
-x_priority = []
-
-x_data_set = list(zip(x_wo_num,x_enter_date,x_due_date,x_crew,x_craft,
-                     x_priority))
-x_df = pd.DataFrame(data = x_data_set, columns=['WO Num', 'Enter Date', 
-                                               'Due Date', 'Crew', 'Craft_v', 
-                                               'WO Priority'])
-
+# create a dataframe for Excel data
+x_df = pd.DataFrame(columns=['WO Num', 'Enter Date', 'Due Date', 'Crew', 
+                             'Craft_v', 'WO Priority'])
 
 
 '''
@@ -135,33 +129,33 @@ This loop goes through the avg_wo_per_wk data and for each row creates an
 individual "dummy" or projected WO and creates data from that so there is
 and dataframe of individual projected WO's as if they've already been created.
 '''
-# begin building data for projected WO's
+
 today = pd.to_datetime('today')
 # project two weeks worth of data from todays date
-Week1 = today + timedelta(7)
-Week2 = today + timedelta(14)
+week_1 = today + timedelta(7)
+week_2 = today + timedelta(14)
 
 # assign all work orders to have an enter date of these mondays
-FirstMonday = (Week1 - timedelta(days=Week1.weekday()))
-SecondMonday = (Week2 - timedelta(days=Week2.weekday()))
+first_monday = (week_1 - timedelta(days=week_1.weekday()))
+second_monday = (week_2 - timedelta(days=week_2.weekday()))
 
 i = 0 # row of data we're pulling
 while i < len(avg_wo_per_wk):
     
-    # select start and due dates
-    Crew = avg_wo_per_wk.ix[i,'WO Crew']
-    WO_Zone = avg_wo_per_wk.ix[i,'Zone']
-    Craft_v = avg_wo_per_wk.ix[i,'Craft_v']
-    WO_Priority = avg_wo_per_wk.ix[i,'WO Priority']
-    WO_Count = avg_wo_per_wk.ix[i,'WOcount']
-    HrsPerWO = avg_wo_per_wk.ix[i,'HrsPerWO']
-    PriorityDays = avg_wo_per_wk.ix[i,'PriorityDays']
-    WO_Num = 'Projected'    
+    # select relevant data for when the days get split up
+    crew = avg_wo_per_wk.ix[i,'WO Crew']
+    wo_zone = avg_wo_per_wk.ix[i,'Zone']
+    craft_v = avg_wo_per_wk.ix[i,'Craft_v']
+    wo_priority = avg_wo_per_wk.ix[i,'WO Priority']
+    wo_count = avg_wo_per_wk.ix[i,'WOcount']
+    hrs_per_wo = avg_wo_per_wk.ix[i,'HrsPerWO']
+    pri_days = avg_wo_per_wk.ix[i,'PriorityDays']
+    wo_num = 'Projected'    
 
     ii = 0 # iterate through number of estimated WO's
-    while ii < WO_Count:
-        aa = pd.DataFrame([[Crew, WO_Zone, Craft_v, WO_Priority, WO_Num, 
-                            HrsPerWO, FirstMonday, FirstMonday+PriorityDays]], 
+    while ii < wo_count:
+        aa = pd.DataFrame([[crew, wo_zone, craft_v, wo_priority, wo_num, 
+                            hrs_per_wo, first_monday, first_monday+pri_days]], 
                             columns=['Crew', 'WO Zone', 'Craft_v', 
                                      'WO Priority', 'WO Num', 'HrsPerWO', 
                                      'Enter Date', 'Due Date'])
@@ -172,13 +166,13 @@ while i < len(avg_wo_per_wk):
     i = i + 1
 
 # copy the same average data except for the next week
-week2_df = x_df.copy()
+week_2_df = x_df.copy()
 
 # same avg data, just need to create it for the next week, so should have an 
 # enter date of the second Monday, and due dates will all be adjust one week
-week2_df['Enter Date'] = week2_df['Enter Date'] + timedelta(7)
-week2_df['Due Date'] = week2_df['Due Date'] + timedelta(7)
-x_df = x_df.append(week2_df, ignore_index=True)
+week_2_df['Enter Date'] = week_2_df['Enter Date'] + timedelta(7)
+week_2_df['Due Date'] = week_2_df['Due Date'] + timedelta(7)
+x_df = x_df.append(week_2_df, ignore_index=True)
 
 x_df.to_excel('Projected SR.xlsx', index=False)
 print('Done')
