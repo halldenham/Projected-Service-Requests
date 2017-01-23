@@ -22,10 +22,10 @@ from datetime import datetime, timedelta, date
 location = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_Open_and' \
             '_Closed_WO_-_DGH_Master.xlsx'
 
-''' 
+
 # alternate location for Projected SR
 #location = r'C:\Users\dh1023.AD\Desktop\Python\Projected SR.xlsx'            
-'''
+
             
 # Parse a specific sheet
 df = pd.read_excel(location)
@@ -108,9 +108,9 @@ while i < len(df):
 # export results to Excel   
 x_df.to_excel('Estimated Hrs per week.xlsx', index=False)
 
-'''
+
 # alternate location for taking the SR projected
 #x_df.to_excel('Estimated Hrs per week SR Proj.xlsx', index=False)
-'''
+
 
 print('Done')
