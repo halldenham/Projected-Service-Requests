@@ -7,11 +7,7 @@ Created on Fri Nov  4 10:05:13 2016
 
 # Import libraries
 import pandas as pd
-import matplotlib
-import numpy as np
-import sys
-import matplotlib
-from datetime import datetime, timedelta, date
+from datetime import timedelta, date
 
 # Location of file with data
 # Criteria for Report:
@@ -19,17 +15,40 @@ from datetime import datetime, timedelta, date
 # WO Status = "Assigned; Open"
 # Crews = "All"
 
-location = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_Open_and' \
+
+"""
+import excel worksheets
+"""
+wo_excel = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_Open_and' \
             '_Closed_WO_-_DGH_Master.xlsx'
+# create a dataframe
+open_assigned_df = pd.read_excel(wo_excel)
+
+# location for Projected SR for other python code
+proj_sr_excel = r'C:\Users\dh1023.AD\Desktop\Python\Projected SR.xlsx'
+# create a dataframe
+proj_sr_df = pd.read_excel(proj_sr_excel)
 
 
-# alternate location for Projected SR
-#location = r'C:\Users\dh1023.AD\Desktop\Python\Projected SR.xlsx'            
 
-            
-# Parse a specific sheet
-df = pd.read_excel(location)
+"""
+Join the projected SR with the actual open WO's
+"""
+# ensure the two dataframes have the same column names
+proj_sr_df = proj_sr_df.rename(columns={'Due Date': 'Comp Due Date_v', \
+                                        'HrsPerWO': 'Est Hrs WO Calculated_v'\
+                                        , 'Crew': 'WO Crew'})
 
+# add the projected WO's to the actual open and assigned WO's
+wo_df = open_assigned_df.append(proj_sr_df, ignore_index=True)
+
+
+
+
+
+"""
+Find the estimated hours
+"""
 # create the dataframe to write data to
 x_Date = []
 x_Hrs = []
@@ -47,23 +66,23 @@ today = pd.to_datetime(date.today())
 # begin loop!!!!!!!!!!!!!
 i = 0 # row of data we're pulling
 
-while i < len(df):
+while i < len(wo_df):
     
     # select start and due dates
-    wo_num = df.iloc[i,0]
-    avg_hrs = df.iloc[i,1]
-    enter_date = df.iloc[i,2]
-    due_date = df.iloc[i,3]    
-    sr_num = df.iloc[i,4]
-    crew = df.iloc[i,5]
-    craft = df.iloc[i,6]
-    priority = df.iloc[i,7]
+    wo_num = wo_df.ix[i,'Comp Due Date_v']
+    avg_hrs = wo_df.ix[i,'Est Hrs WO Calculated_v']
+    enter_date = wo_df.ix[i,'Enter Date']
+    due_date = wo_df.ix[i,'Comp Due Date_v']    
+    req_num = wo_df.ix[i,'Req Number']
+    crew = wo_df.ix[i,'WO Crew']
+    craft = wo_df.ix[i,'Craft_v']
+    priority = wo_df.ix[i,'WO Priority']
 
     # select the earliest date available to work
     if due_date <= today:
         # append only 1 row of data if it's already past due
         due_date_mon = (due_date - timedelta(days=due_date.weekday()))
-        aa = pd.DataFrame([[due_date_mon, avg_hrs, wo_num, sr_num, crew, craft, 
+        aa = pd.DataFrame([[due_date_mon, avg_hrs, wo_num, req_num, crew, craft, 
                             priority]], columns=['Date', 'Est Hrs', 'WO Num', 
                                                  'SR Num', 'crew', 'craft', 
                                                  'priority'])
@@ -95,8 +114,8 @@ while i < len(df):
         # and monday 2
         # write those into a dataframe and then append it to the original data
         for x in df_weeks_between: 
-            aa = pd.DataFrame([[x, avg_hrs_per_week, wo_num, sr_num, crew, craft, 
-                                priority]], columns=['Date', 'Est Hrs', 
+            aa = pd.DataFrame([[x, avg_hrs_per_week, wo_num, req_num, crew, 
+                                craft, priority]], columns=['Date', 'Est Hrs', 
                                                      'WO Num', 'SR Num', 
                                                      'crew', 'craft', 
                                                      'priority'])
