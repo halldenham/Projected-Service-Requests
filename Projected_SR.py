@@ -5,18 +5,15 @@ Created on Mon Nov 28 15:57:18 2016
 @author: dh1023
 """
 
-# For a given data set, find how many weeks there are then find avg by 
-# priority and craft and add est hours to a dataframe
-
 # Import libraries
 import pandas as pd
 #import matplotlib
 import numpy as np
 #import sys
 #import matplotlib
-from datetime import datetime, timedelta, date
-import datetime as dt
+from datetime import timedelta
 import math
+
 
 '''
 Import the data
@@ -47,7 +44,8 @@ bldg_df = pd.read_excel(bldg_excel)
 
 
 '''
-Merge/Join the Zone and Building Information to SR data
+Merge/Join the Zone and Building Information to SR data and updated the Crews
+to all be OPS x instead of ZONE x
 '''
 # change the name of the bldg number to make merge/join easier
 bldg_df.columns = ['WO Building', 'Zone']
@@ -61,7 +59,29 @@ bldg_df['WO Building'] = pd.to_numeric(bldg_df['WO Building'], errors='coerce')
 sr_df = sr_df.merge(bldg_df, on='WO Building', how='left')
 
 
+# list of the zones to change in to "OPS x" for following loop
+zone_list = ['ZONE 1', 'ZONE 2', 'ZONE 4', 'ZONE 5']
 
+# this loop takes WO's that currently have "ZONE x" and looks at what Ops area
+# the building is currently in (which is the "Zone" column) and gives the WO
+# that OPS as the crew instead of Zone.
+i = 0
+while i < len(sr_df):    
+    # change any 'Zone 3' crews to 'Ops C'
+    if sr_df.ix[i,'WO Crew'] == 'ZONE 3':
+        sr_df.ix[i,'WO Crew'] = 'OPS C'
+    # change any other "Zone x" to "Ops x"
+    elif sr_df.ix[i,'WO Crew'] in zone_list:
+        ops_letter = sr_df.ix[i,'Zone']
+        # check to make sure ops_letter is actually a letter: if there's no
+        # letter then there is no bldg associated with the WO
+        if pd.isnull(ops_letter):
+            new_ops = 'no_bldg'
+        else:
+            new_ops = 'OPS ' + ops_letter
+        sr_df.ix[i,'WO Crew'] = new_ops
+
+    i = i + 1
 
 
 '''
@@ -73,7 +93,7 @@ weeks_of_data = (sr_df['Enter Date'].max() - sr_df['Enter Date'].min()).days/7
 # How many WO's were entered by priority, craft, & zone over the given period?
 # Use ".size()" instead of .count() because size counts null values.
 # Note: our historical average becomes our projected work.
-previous_wo = sr_df.groupby(['WO Crew','Zone','Craft_v','WO Priority']).agg({
+previous_wo = sr_df.groupby(['WO Crew', 'Craft_v', 'WO Priority']).agg({
                             'WO Num': np.size, 'Est Hrs WO Calculated_v': 
                                 np.sum})
 
@@ -86,6 +106,9 @@ avg_wo_per_wk = previous_wo / weeks_of_data
 
 # reset index to actually create a dataframe
 avg_wo_per_wk = avg_wo_per_wk.reset_index()
+
+# now remove any WO's that don't have a building...no way to account for those
+avg_wo_per_wk = avg_wo_per_wk[avg_wo_per_wk['WO Crew'] != 'no_bldg']
 
 # calculate avg hrs per WO by adding column that way you don't have to perform
 # that calculation over and over again when you write the data
@@ -108,10 +131,6 @@ wo_pri_days = pd.DataFrame(data = wo_pri_days_raw, columns=['WO Priority',
 # If WO priority = priority number then column timedelta equals said thing
 avg_wo_per_wk = avg_wo_per_wk.merge(wo_pri_days, on='WO Priority', how='left')
 
-# !!!!!!!!!!! need to update the WO crew here to eliminate "Zone x" and change
-# to be "Ops x"
-#if avg_wo_per_wk['WO Crew'] == 'Zone wildcard character':
-#   avg_wo_per_wk['updated_crew'] = "Ops " + avg_wo_per_wk['Zone']
 
 
 
@@ -144,7 +163,6 @@ while i < len(avg_wo_per_wk):
     
     # select relevant data for when the days get split up
     crew = avg_wo_per_wk.ix[i,'WO Crew']
-    wo_zone = avg_wo_per_wk.ix[i,'Zone']
     craft_v = avg_wo_per_wk.ix[i,'Craft_v']
     wo_priority = avg_wo_per_wk.ix[i,'WO Priority']
     wo_count = avg_wo_per_wk.ix[i,'WOcount']
@@ -154,9 +172,9 @@ while i < len(avg_wo_per_wk):
 
     ii = 0 # iterate through number of estimated WO's
     while ii < wo_count:
-        aa = pd.DataFrame([[crew, wo_zone, craft_v, wo_priority, wo_num, 
+        aa = pd.DataFrame([[crew, craft_v, wo_priority, wo_num, 
                             hrs_per_wo, first_monday, first_monday+pri_days]], 
-                            columns=['Crew', 'WO Zone', 'Craft_v', 
+                            columns=['Crew', 'Craft_v', 
                                      'WO Priority', 'WO Num', 'HrsPerWO', 
                                      'Enter Date', 'Due Date'])
         x_df = x_df.append(aa, ignore_index=True)
