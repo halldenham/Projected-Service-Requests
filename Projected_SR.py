@@ -7,10 +7,7 @@ Created on Mon Nov 28 15:57:18 2016
 
 # Import libraries
 import pandas as pd
-#import matplotlib
 import numpy as np
-#import sys
-#import matplotlib
 from datetime import timedelta
 import math
 
