@@ -104,7 +104,15 @@ avg_wo_per_wk = previous_wo / weeks_of_data
 # reset index to actually create a dataframe
 avg_wo_per_wk = avg_wo_per_wk.reset_index()
 
-# now remove any WO's that don't have a building...no way to account for those
+
+
+
+
+'''
+Cleaning up the data
+'''
+
+# remove any WO's that don't have a building...no way to account for those
 avg_wo_per_wk = avg_wo_per_wk[avg_wo_per_wk['WO Crew'] != 'no_bldg']
 
 # calculate avg hrs per WO by adding column that way you don't have to perform
@@ -118,15 +126,20 @@ del avg_wo_per_wk['Est Hrs WO Calculated_v']
 # round the count of WO's up to nearest whole number using "ceil"
 avg_wo_per_wk['WOcount'] = avg_wo_per_wk['WOcount'].apply(math.ceil)
                                                       
+
+# add wo_pri_days timedelta data to end of avg_wo_per_wk data.
 # create a table of time deltas for the Priority Days.
 wo_pri_days_raw = [(1, timedelta(4)), (2, timedelta(8)), (3, timedelta(14)), 
               (4, timedelta(30))]
 wo_pri_days = pd.DataFrame(data = wo_pri_days_raw, columns=['WO Priority', 
                                                    'PriorityDays'])
 
-# add wo_pri_days timedelta data to end of avg_wo_per_wk data.
 # If WO priority = priority number then column timedelta equals said thing
 avg_wo_per_wk = avg_wo_per_wk.merge(wo_pri_days, on='WO Priority', how='left')
+
+# change priorities from 1 to 101, 2 to 102, 3 to 103, 4 to 104 for use in 
+# Tableau.
+avg_wo_per_wk['WO Priority'] = avg_wo_per_wk['WO Priority']+100
 
 
 
