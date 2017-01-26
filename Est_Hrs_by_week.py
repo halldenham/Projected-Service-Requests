@@ -69,7 +69,7 @@ i = 0 # row of data we're pulling
 while i < len(wo_df):
     
     # select start and due dates
-    wo_num = wo_df.ix[i,'Comp Due Date_v']
+    wo_num = wo_df.ix[i,'WO Num']
     avg_hrs = wo_df.ix[i,'Est Hrs WO Calculated_v']
     enter_date = wo_df.ix[i,'Enter Date']
     due_date = wo_df.ix[i,'Comp Due Date_v']    
@@ -84,8 +84,8 @@ while i < len(wo_df):
         due_date_mon = (due_date - timedelta(days=due_date.weekday()))
         aa = pd.DataFrame([[due_date_mon, avg_hrs, wo_num, req_num, crew, craft, 
                             priority]], columns=['Date', 'Est Hrs', 'WO Num', 
-                                                 'SR Num', 'crew', 'craft', 
-                                                 'priority'])
+                                                 'SR Num', 'Crew', 'Craft', 
+                                                 'Priority'])
         x_df = x_df.append(aa, ignore_index=True)
         
     else:
@@ -117,8 +117,8 @@ while i < len(wo_df):
             aa = pd.DataFrame([[x, avg_hrs_per_week, wo_num, req_num, crew, 
                                 craft, priority]], columns=['Date', 'Est Hrs', 
                                                      'WO Num', 'SR Num', 
-                                                     'crew', 'craft', 
-                                                     'priority'])
+                                                     'Crew', 'Craft', 
+                                                     'Priority'])
             x_df = x_df.append(aa, ignore_index=True)
 
     # loop through all the rows    
