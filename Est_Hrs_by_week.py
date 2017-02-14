@@ -9,16 +9,17 @@ Created on Fri Nov  4 10:05:13 2016
 import pandas as pd
 from datetime import timedelta, date
 
-# Location of file with data
-# Criteria for Report:
-# Req Type = "PM; SR"
-# WO Status = "Assigned; Open"
-# Crews = "All"
 
 
 """
 import excel worksheets
 """
+
+# Location of file with data
+# Criteria for Report:
+# Req Type = "PM; SR"
+# WO Status = "Assigned; Open"
+# Crews = "All"
 wo_excel = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_Open_and' \
             '_Closed_WO_-_DGH_Master.xlsx'
 # create a dataframe
@@ -124,12 +125,24 @@ while i < len(wo_df):
     # loop through all the rows    
     i = i + 1
 
+"""
+add on the available hours to data from reference files
+"""
+# import data from reference files
+avail_hrs = r'C:\Users\dh1023.AD\Desktop\Python\Reference Files or ' \
+            'Standards\Ops Available Hrs.xlsx'
+# create a dataframe
+avail_hrs_df = pd.read_excel(avail_hrs)
+
+# update the empty "date" field to a couple days in future so it shows up in
+# Tableau report fields when filtering for data in a two week range
+avail_hrs_df['Date'] = today + timedelta(2)
+
+# add that data to the end of the estimated hours
+x_df = x_df.append(avail_hrs_df, ignore_index=True)
+    
 # export results to Excel   
 x_df.to_excel('Estimated Hrs per week.xlsx', index=False)
-
-
-# alternate location for taking the SR projected
-#x_df.to_excel('Estimated Hrs per week SR Proj.xlsx', index=False)
 
 
 print('Done')
