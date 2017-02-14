@@ -30,8 +30,9 @@ sr_df = pd.read_excel(sr_excel)
 # Location of file with data of what buildings belong to what zones
 # Note that first column should be "Bldg/ Land Entity" which is the building 
 # number and second column should be "Zone" 
-bldg_excel = r'C:\Users\dh1023.AD\Desktop\Python\FMS61100_-_Active_Build' \
-               'ing_or_Land_Entity_Listing.xlsx'
+bldg_excel = r'C:\Users\dh1023.AD\Desktop\Python\Reference Files or ' \
+              'Standards\FMS61100_-_Active_Building_or_Land_Entity' \
+              '_Listing.xlsx'
 
 # Create dataframe from building data
 bldg_df = pd.read_excel(bldg_excel)
