@@ -10,10 +10,47 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta
 import math
+import tkinter as tk
+
+
+'''
+function to convert 'zone x' to 'ops x'
+'''
+def zone_ops(wo_dataframe):
+    # this function converts a list of crews from the old 'Zone X' to 'Ops X'    
+    
+    zone_list = ['ZONE 1', 'ZONE 2', 'ZONE 4', 'ZONE 5']
+    # list of the zones to change in to 'OPS x'
+    
+    if wo_dataframe['WO Crew'] == 'ZONE 3':
+        # change any 'Zone 3' crews to 'Ops C'
+        new_crew = 'OPS C' 
+    elif wo_dataframe['WO Crew'] in zone_list:
+        # change the work order crew from 'ZONE X' to 'OPS X' where 'X' is the
+        # current zone for the building with which the old work order is 
+        # associated
+        
+        if pd.isnull(wo_dataframe['Zone']):
+            # if it is a Zone crew, but the work order does not have a 
+            # building associated with it, then error
+            new_crew = 'error_no_bldg'
+        else:
+            new_crew = 'OPS ' + wo_dataframe['Zone']
+    else:
+        # if the crew is not 'zone x' then leave crew as-is
+        # this takes care of 'MCORD' and any crews that are already 'ops x'
+        new_crew = wo_dataframe['WO Crew']
+    return new_crew;
+        
 
 
 '''
 Import the data
+
+At some point in future, create a dialog box to prompt user to select file
+root = tk.Tk()
+root.withdraw()
+file_path = tk.filedialog.askopenfilename()
 '''
 # Location of file with previous SR data
 # This data can have any length of date range and should include all WO's
@@ -39,8 +76,6 @@ bldg_df = pd.read_excel(bldg_excel)
 
 
 
-
-
 '''
 Merge/Join the Zone and Building Information to SR data and updated the Crews
 to all be OPS x instead of ZONE x
@@ -56,30 +91,9 @@ bldg_df['WO Building'] = pd.to_numeric(bldg_df['WO Building'], errors='coerce')
 # current zone/ops associated with them
 sr_df = sr_df.merge(bldg_df, on='WO Building', how='left')
 
+# convert the "Zone" crew to "Ops" crew using function
+sr_df['WO Crew'] = sr_df.apply(zone_ops, axis=1)
 
-# list of the zones to change in to "OPS x" for following loop
-zone_list = ['ZONE 1', 'ZONE 2', 'ZONE 4', 'ZONE 5']
-
-# this loop takes WO's that currently have "ZONE x" and looks at what Ops area
-# the building is currently in (which is the "Zone" column) and gives the WO
-# that OPS as the crew instead of Zone.
-i = 0
-while i < len(sr_df):    
-    # change any 'Zone 3' crews to 'Ops C'
-    if sr_df.ix[i,'WO Crew'] == 'ZONE 3':
-        sr_df.ix[i,'WO Crew'] = 'OPS C'
-    # change any other "Zone x" to "Ops x"
-    elif sr_df.ix[i,'WO Crew'] in zone_list:
-        ops_letter = sr_df.ix[i,'Zone']
-        # check to make sure ops_letter is actually a letter: if there's no
-        # letter then there is no bldg associated with the WO
-        if pd.isnull(ops_letter):
-            new_ops = 'no_bldg'
-        else:
-            new_ops = 'OPS ' + ops_letter
-        sr_df.ix[i,'WO Crew'] = new_ops
-
-    i = i + 1
 
 
 '''
@@ -107,12 +121,9 @@ avg_wo_per_wk = avg_wo_per_wk.reset_index()
 
 
 
-
-
 '''
 Cleaning up the data
 '''
-
 # remove any WO's that don't have a building...no way to account for those
 avg_wo_per_wk = avg_wo_per_wk[avg_wo_per_wk['WO Crew'] != 'no_bldg']
 
@@ -143,14 +154,19 @@ avg_wo_per_wk = avg_wo_per_wk.merge(wo_pri_days, on='WO Priority', how='left')
 avg_wo_per_wk['WO Priority'] = avg_wo_per_wk['WO Priority']+100
 
 
+# give work orders a start and due date of the upcoming week and attached to 
+# avg_wo_per_wk dataframe
+today = pd.to_datetime('today')
+# project two weeks worth of data from todays date
+week_1 = today + timedelta(7)
+week_2 = today + timedelta(14)
 
+# assign all work orders to have an enter date of this monday
+first_monday = (week_1 - timedelta(days=week_1.weekday()))
 
-'''
-Create a dataframe for individual projected work orders
-'''
-# create a dataframe for Excel data
-x_df = pd.DataFrame(columns=['WO Num', 'Enter Date', 'Due Date', 'Crew', 
-                             'Craft_v', 'WO Priority'])
+avg_wo_per_wk['Enter Date'] = first_monday
+avg_wo_per_wk['Due Date'] = first_monday + avg_wo_per_wk['PriorityDays']
+
 
 
 '''
@@ -159,16 +175,7 @@ This loop goes through the avg_wo_per_wk data and for each row creates an
 individual "dummy" or projected WO and creates data from that so there is
 and dataframe of individual projected WO's as if they've already been created.
 '''
-
-today = pd.to_datetime('today')
-# project two weeks worth of data from todays date
-week_1 = today + timedelta(7)
-week_2 = today + timedelta(14)
-
-# assign all work orders to have an enter date of these mondays
-first_monday = (week_1 - timedelta(days=week_1.weekday()))
-second_monday = (week_2 - timedelta(days=week_2.weekday()))
-
+x_df = pd.DataFrame(columns=[])
 i = 0 # row of data we're pulling
 while i < len(avg_wo_per_wk):
     
@@ -197,6 +204,8 @@ while i < len(avg_wo_per_wk):
 # copy the same average data except for the next week
 week_2_df = x_df.copy()
 
+second_monday = (week_2 - timedelta(days=week_2.weekday()))
+
 # same avg data, just need to create it for the next week, so should have an 
 # enter date of the second Monday, and due dates will all be adjust one week
 week_2_df['Enter Date'] = week_2_df['Enter Date'] + timedelta(7)
@@ -205,3 +214,32 @@ x_df = x_df.append(week_2_df, ignore_index=True)
 
 x_df.to_excel('Projected SR.xlsx', index=False)
 print('Done')
+
+
+
+'''
+this is an alternate function way of the code, but I haven't
+quite figured it out...this works but it's slower than the existing code as
+of 3/24/17 so I'm not going to use it...but I'll let it hang out here
+'''
+#def proj_wo(old_sr):
+#    # something here
+#    # for each row of data, copy it n times into a dataframe where n = WOcount
+#  
+#    df = pd.DataFrame(columns=[])
+#    # create empty dataframe to append calculated data to
+#    
+#    for i in range(old_sr['WOcount']):
+#        df = df.append(old_sr, ignore_index=True)
+#    
+#    df['WO Num'] = 'Projected'
+#    return df;
+#
+#x_df = pd.DataFrame(columns=[])
+#i = 0 # row of data we're pulling
+#
+#
+#while i < len(avg_wo_per_wk):
+#    aa = proj_wo(avg_wo_per_wk.ix[i,:])
+#    x_df = x_df.append(aa)
+#    i = i + 1
