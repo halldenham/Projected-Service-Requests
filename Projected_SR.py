@@ -58,7 +58,7 @@ file_path = tk.filedialog.askopenfilename()
 # to predict: i.e. if the next two weeks are Dec 1-14, 2016, then the data
 # should cover Dec 1-14, 2015 and potentially some buffer on either side.
 # This is the raw data used to predict future SR.
-sr_excel = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_SR_Project' \
+sr_excel = r'C:\Users\dh1023\Desktop\Python\Zone_Manager_Report_SR_Project' \
          'ed_-_DGH_Master.xlsx'
 
 # Create dataframe from previous SR data
@@ -67,7 +67,7 @@ sr_df = pd.read_excel(sr_excel)
 # Location of file with data of what buildings belong to what zones
 # Note that first column should be "Bldg/ Land Entity" which is the building 
 # number and second column should be "Zone" 
-bldg_excel = r'C:\Users\dh1023.AD\Desktop\Python\Reference Files or ' \
+bldg_excel = r'C:\Users\dh1023\Desktop\Python\Reference Files or ' \
               'Standards\FMS61100_-_Active_Building_or_Land_Entity' \
               '_Listing.xlsx'
 
