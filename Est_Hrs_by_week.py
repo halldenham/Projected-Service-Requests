@@ -20,13 +20,13 @@ import excel worksheets
 # Req Type = "PM; SR"
 # WO Status = "Assigned; Open"
 # Crews = "All"
-wo_excel = r'C:\Users\dh1023.AD\Desktop\Python\Zone_Manager_Report_Open_and' \
+wo_excel = r'C:\Users\dh1023\Desktop\Python\Zone_Manager_Report_Open_and' \
             '_Closed_WO_-_DGH_Master.xlsx'
 # create a dataframe
 open_assigned_df = pd.read_excel(wo_excel)
 
 # location for Projected SR for other python code
-proj_sr_excel = r'C:\Users\dh1023.AD\Desktop\Python\Projected SR.xlsx'
+proj_sr_excel = r'C:\Users\dh1023\Desktop\Python\Projected SR.xlsx'
 # create a dataframe
 proj_sr_df = pd.read_excel(proj_sr_excel)
 
@@ -129,7 +129,7 @@ while i < len(wo_df):
 add on the available hours to data from reference files
 """
 # import data from reference files
-avail_hrs = r'C:\Users\dh1023.AD\Desktop\Python\Reference Files or ' \
+avail_hrs = r'C:\Users\dh1023\Desktop\Python\Reference Files or ' \
             'Standards\Ops Available Hrs.xlsx'
 # create a dataframe
 avail_hrs_df = pd.read_excel(avail_hrs)
