@@ -51,27 +51,26 @@ At some point in future, create a dialog box to prompt user to select file
 root = tk.Tk()
 root.withdraw()
 file_path = tk.filedialog.askopenfilename()
-'''
-# Location of file with previous SR data
+
+# Location of file with historical SR data
 # This data can have any length of date range and should include all WO's
 # This range of data usually mirrors the time period for which it is seeking
 # to predict: i.e. if the next two weeks are Dec 1-14, 2016, then the data
 # should cover Dec 1-14, 2015 and potentially some buffer on either side.
 # This is the raw data used to predict future SR.
-sr_excel = r'C:\Users\dh1023\Desktop\Python\Zone_Manager_Report_SR_Project' \
-         'ed_-_DGH_Master.xlsx'
+'''
 
-# Create dataframe from previous SR data
-sr_df = pd.read_excel(sr_excel)
+
+hist_sr_excel = r'C:\Users\dh1023\Desktop\Python\prod_meet_open_wo_overview'\
+                 '\Generic_WO_Report_-_SR_Projected.xlsx'
+hist_sr_df = pd.read_excel(hist_sr_excel, sheetname='Python')
 
 # Location of file with data of what buildings belong to what zones
 # Note that first column should be "Bldg/ Land Entity" which is the building 
 # number and second column should be "Zone" 
-bldg_excel = r'C:\Users\dh1023\Desktop\Python\Reference Files or ' \
-              'Standards\FMS61100_-_Active_Building_or_Land_Entity' \
-              '_Listing.xlsx'
-
-# Create dataframe from building data
+bldg_excel = r'C:\Users\dh1023\Desktop\Python\3. Reference Files or ' \
+              'Standards\FMS61100_-_Active_Building_or_Land_Entity_' \
+              'Listing.xlsx'
 bldg_df = pd.read_excel(bldg_excel)
 
 
@@ -84,15 +83,15 @@ to all be OPS x instead of ZONE x
 bldg_df.columns = ['WO Building', 'Zone']
 
 # make sure the building numbers are numbers, not text from WebI
-sr_df['WO Building'] = pd.to_numeric(sr_df['WO Building'], errors='coerce')
+hist_sr_df['WO Building'] = pd.to_numeric(hist_sr_df['WO Building'], errors='coerce')
 bldg_df['WO Building'] = pd.to_numeric(bldg_df['WO Building'], errors='coerce')
 
 # Merge/join data from Buldings so that the work orders have the correct 
 # current zone/ops associated with them
-sr_df = sr_df.merge(bldg_df, on='WO Building', how='left')
+hist_sr_df = hist_sr_df.merge(bldg_df, on='WO Building', how='left')
 
 # convert the "Zone" crew to "Ops" crew using function
-sr_df['WO Crew'] = sr_df.apply(zone_ops, axis=1)
+hist_sr_df['WO Crew'] = hist_sr_df.apply(zone_ops, axis=1)
 
 
 
@@ -100,13 +99,14 @@ sr_df['WO Crew'] = sr_df.apply(zone_ops, axis=1)
 Find the average per week of work orders and use as our projection
 '''
 # how many weeks worth of data do we have?
-weeks_of_data = (sr_df['Enter Date'].max() - sr_df['Enter Date'].min()).days/7
+weeks_of_data = (hist_sr_df['Enter Date'].max() 
+                - hist_sr_df['Enter Date'].min()).days/7
 
 # How many WO's were entered by priority, craft, & zone over the given period?
 # Use ".size()" instead of .count() because size counts null values.
 # Note: our historical average becomes our projected work.
-previous_wo = sr_df.groupby(['WO Crew', 'Craft_v', 'WO Priority']).agg({
-                            'WO Num': np.size, 'Est Hrs WO Calculated_v': 
+previous_wo = hist_sr_df.groupby(['WO Crew', 'Craft_v', 'WO Priority']).agg({
+                            'WO Num': np.size, 'WO Actual Labor Hours': 
                                 np.sum})
 
 # rename WO Num column to "WOcount" since it no longer is individual WO's
@@ -129,15 +129,15 @@ avg_wo_per_wk = avg_wo_per_wk[avg_wo_per_wk['WO Crew'] != 'no_bldg']
 
 # calculate avg hrs per WO by adding column that way you don't have to perform
 # that calculation over and over again when you write the data
-avg_wo_per_wk['HrsPerWO'] = avg_wo_per_wk['Est Hrs WO Calculated_v'] / \
+avg_wo_per_wk['HrsPerWO'] = avg_wo_per_wk['WO Actual Labor Hours'] / \
                            avg_wo_per_wk['WOcount']
 
-# drop 'Est Hrs WO Calculated_v' now that we're done with it
-del avg_wo_per_wk['Est Hrs WO Calculated_v']
+# drop 'WO Actual Labor Hours' now that we're done with it
+del avg_wo_per_wk['WO Actual Labor Hours']
 
 # round the count of WO's up to nearest whole number using "ceil"
 avg_wo_per_wk['WOcount'] = avg_wo_per_wk['WOcount'].apply(math.ceil)
-                                                      
+
 
 # add wo_pri_days timedelta data to end of avg_wo_per_wk data.
 # create a table of time deltas for the Priority Days.
