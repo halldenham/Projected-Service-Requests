@@ -13,30 +13,29 @@ from datetime import timedelta, date
 
 """
 import excel worksheets
+
+Excel Spreadsheets are written to fileshare from WebI
+
+Criteria for Report:
+Req Type = "PM; SR"
+WO Status = "Assigned; Open"
+Crews = "All"
 """
 
-# Location of file with data
-# Criteria for Report:
-# Req Type = "PM; SR"
-# WO Status = "Assigned; Open"
-# Crews = "All"
-wo_excel = r'C:\Users\dh1023\Desktop\Python\Zone_Manager_Report_Open_and' \
-            '_Closed_WO_-_DGH_Master.xlsx'
-# create a dataframe
-open_assigned_df = pd.read_excel(wo_excel)
+wo_excel = 'Z:\Open and Assigned WO.xlsx'
+open_assigned_df = pd.read_excel(wo_excel, sheetname='Python')
 
-# location for Projected SR for other python code
-proj_sr_excel = r'C:\Users\dh1023\Desktop\Python\Projected SR.xlsx'
-# create a dataframe
+# Projected SR are based from another Python program
+proj_sr_excel = r'C:\Users\dh1023\Desktop\Python\prod_meet_open_wo_'\
+                'overview\Projected SR.xlsx'
 proj_sr_df = pd.read_excel(proj_sr_excel)
-
 
 
 """
 Join the projected SR with the actual open WO's
 """
 # ensure the two dataframes have the same column names
-proj_sr_df = proj_sr_df.rename(columns={'Due Date': 'Comp Due Date_v', \
+proj_sr_df = proj_sr_df.rename(columns={'Due Date': 'WO Priority Due Date', \
                                         'HrsPerWO': 'Est Hrs WO Calculated_v'\
                                         , 'Crew': 'WO Crew'})
 
@@ -64,16 +63,15 @@ x_df = pd.DataFrame(data = x_dataSet, columns=['Date', 'Est Hrs', 'WO Num',
 
 
 today = pd.to_datetime(date.today())
-# begin loop!!!!!!!!!!!!!
+# begin loop!
 i = 0 # row of data we're pulling
-
 while i < len(wo_df):
     
     # select start and due dates
     wo_num = wo_df.ix[i,'WO Num']
     avg_hrs = wo_df.ix[i,'Est Hrs WO Calculated_v']
     enter_date = wo_df.ix[i,'Enter Date']
-    due_date = wo_df.ix[i,'Comp Due Date_v']    
+    due_date = wo_df.ix[i,'WO Priority Due Date']    
     req_num = wo_df.ix[i,'Req Number']
     crew = wo_df.ix[i,'WO Crew']
     craft = wo_df.ix[i,'Craft_v']
@@ -129,8 +127,8 @@ while i < len(wo_df):
 add on the available hours to data from reference files
 """
 # import data from reference files
-avail_hrs = r'C:\Users\dh1023\Desktop\Python\Reference Files or ' \
-            'Standards\Ops Available Hrs.xlsx'
+avail_hrs = r'C:\Users\dh1023\Desktop\Python\3. Reference Files or ' \
+             'Standards\Ops Available Hrs.xlsx'
 # create a dataframe
 avail_hrs_df = pd.read_excel(avail_hrs)
 
